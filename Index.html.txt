@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ameedo AI Assistant 🤖</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background: #1e1e2f;
+      color: #fff;
+      font-family: 'Segoe UI', sans-serif;
+    }
+    .container {
+      max-width: 700px;
+      margin: 50px auto;
+      background: #fff;
+      color: #000;
+      border-radius: 12px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.4);
+      padding: 30px;
+    }
+    .chatbox {
+      height: 400px;
+      overflow-y: auto;
+      border: 1px solid #ccc;
+      padding: 15px;
+      border-radius: 10px;
+      background-color: #f5f5f5;
+      margin-bottom: 20px;
+    }
+    .msg {
+      padding: 10px 15px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      max-width: 75%;
+    }
+    .user {
+      background-color: #d1e7ff;
+      align-self: flex-end;
+      margin-left: auto;
+    }
+    .bot {
+      background-color: #e2ffe6;
+      align-self: flex-start;
+      margin-right: auto;
+    }
+    .input-group input {
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2 class="text-center mb-4">Ameedo AI Assistant 🤖</h2>
+    <div class="chatbox d-flex flex-column" id="chatbox"></div>
+    <div class="input-group">
+      <input type="text" id="userInput" class="form-control" placeholder="Ask anything..." />
+      <button class="btn btn-dark" onclick="sendText()">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const OPENAI_API_KEY = "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"; // 🔑 REPLACE with your real OpenAI key
+
+    async function sendText() {
+      const input = document.getElementById('userInput');
+      const message = input.value.trim();
+      if (!message) return;
+
+      appendMessage('user', message);
+      input.value = "";
+
+      const payload = {
+        model: "gpt-3.5-turbo", // You can use "gpt-4" if your key has access
+        messages: [{ role: "user", content: message }],
+        temperature: 0.7
+      };
+
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      const reply = data.choices?.[0]?.message?.content || "Error getting response!";
+      appendMessage('bot', reply);
+    }
+
+    function appendMessage(sender, text) {
+      const chatbox = document.getElementById('chatbox');
+      const div = document.createElement('div');
+      div.className = `msg ${sender}`;
+      div.textContent = text;
+      chatbox.appendChild(div);
+      chatbox.scrollTop = chatbox.scrollHeight;
+    }
+  </script>
+</body>
+</html>
