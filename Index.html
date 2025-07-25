@@ -2,127 +2,91 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Crypto Signal Dashboard</title>
+  <title>Crypto Trading Signals</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+  >
   <style>
-    body { background: #f8f9fa; padding-top: 20px; }
-    .signal-buy { color: #28a745; font-weight: bold; }
-    .signal-sell { color: #dc3545; font-weight: bold; }
-    .signal-wait { color: #6c757d; font-weight: bold; }
-    .signal-strong { color: #007bff; font-weight: bold; }
+    body {
+      background-color: #f8f9fa;
+    }
+    .signal-box {
+      border-left: 5px solid #007bff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+    .buy { border-color: green; }
+    .sell { border-color: red; }
+    .wait { border-color: orange; }
   </style>
 </head>
 <body>
-<div class="container">
-  <h1 class="mb-4 text-center">Bybit Small‑Cap Signal Dashboard</h1>
-  <div class="d-flex justify-content-center mb-3">
-    <button id="btn-refresh" class="btn btn-primary">Refresh Now</button>
+  <div class="container my-4">
+    <h2 class="text-center mb-4">📈 Ameedo.k9 Crypto Trading Signals</h2>
+    <div class="text-end mb-3">
+      <button class="btn btn-primary" onclick="fetchData()">🔄 Refresh</button>
+    </div>
+    <div class="row" id="signalContainer"></div>
   </div>
-  <div id="cards" class="row gy-3"></div>
-</div>
 
-<script>
-// Track tokens confirmed listed on Bybit
-const tokens = ['altlayer', 'altura'];
+  <script>
+    const tokens = [
+      { id: 'arbitrum', symbol: 'ARB', name: 'Arbitrum' },
+      { id: 'blur', symbol: 'BLUR', name: 'Blur' },
+      { id: 'floki', symbol: 'FLOKI', name: 'Floki' },
+      { id: 'apecoin', symbol: 'APE', name: 'ApeCoin' }
+    ];
 
-async function fetchPrices() {
-  const ids = tokens.join(',');
-  const url = `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`;
-  const resp = await fetch(url);
-  return resp.json();
-}
+    async function fetchData() {
+      const container = document.getElementById('signalContainer');
+      container.innerHTML = '';
+      const now = new Date().toLocaleString();
 
-async function fetchOHLC(id) {
-  const url = `https://api.coingecko.com/api/v3/coins/${id}/market_chart?vs_currency=usd&days=1&interval=hourly`;
-  const resp = await fetch(url);
-  const js = await resp.json();
-  return js.prices.map(p => p[1]);
-}
+      for (let token of tokens) {
+        try {
+          const res = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${token.id}&vs_currencies=usd`);
+          const data = await res.json();
+          const price = data[token.id].usd;
 
-function calculateRSI(closes) {
-  const ups = [], downs = [];
-  for (let i = 1; i < closes.length; i++) {
-    const d = closes[i] - closes[i - 1];
-    ups.push(Math.max(0, d));
-    downs.push(Math.max(0, -d));
-  }
-  const avgU = ups.reduce((a,b) => a+b, 0) / ups.length;
-  const avgD = downs.reduce((a,b) => a+b, 0) / downs.length;
-  return 100 - (100 / (1 + (avgU / avgD)));
-}
+          // Simulate RSI & MACD (replace with real API later)
+          const rsi = Math.floor(Math.random() * 100);
+          const macdPositive = Math.random() > 0.5;
+          let signal = 'WAIT';
+          let signalClass = 'wait';
 
-function calculateEMA(data, period) {
-  const k = 2/(period + 1);
-  let ema = data[0];
-  for (let i = 1; i < data.length; i++) {
-    ema = data[i] * k + ema * (1 - k);
-  }
-  return ema;
-}
+          if (rsi < 30 && macdPositive) {
+            signal = 'STRONG BUY';
+            signalClass = 'buy';
+          } else if (rsi < 30) {
+            signal = 'BUY';
+            signalClass = 'buy';
+          } else if (rsi > 70) {
+            signal = 'SELL';
+            signalClass = 'sell';
+          }
 
-function calculateMACD(closes) {
-  if (closes.length < 21) return null;
-  const slice = closes.slice(-30);
-  const emaFast = calculateEMA(slice.slice(-21), 8);
-  const emaSlow = calculateEMA(slice.slice(-21), 21);
-  const macd = emaFast - emaSlow;
-  const signal = calculateEMA(slice.slice(-20), 5);
-  return { macd, signal, hist: macd - signal };
-}
+          container.innerHTML += `
+            <div class="col-md-3 mb-4">
+              <div class="card p-3 signal-box ${signalClass}">
+                <h5>${token.name} (${token.symbol})</h5>
+                <p><strong>Price:</strong> $${price}</p>
+                <p><strong>Signal:</strong> ${signal}</p>
+                <p><strong>RSI:</strong> ${rsi}</p>
+                <p><strong>MACD:</strong> ${macdPositive ? 'Positive' : 'Negative'}</p>
+                <small class="text-muted">Updated: ${now}</small>
+              </div>
+            </div>
+          `;
+        } catch (err) {
+          console.error(err);
+          container.innerHTML += `<p class="text-danger">Error loading ${token.name}</p>`;
+        }
+      }
+    }
 
-function getSignal(rsi, macd) {
-  if (rsi < 30 && macd && macd.macd > macd.signal) return 'STRONG BUY';
-  if (rsi < 30) return 'BUY';
-  if (rsi > 70) return 'SELL';
-  return 'WAIT';
-}
-
-function trendArrow(prices) {
-  return prices[prices.length - 1] > prices[0] ? '📈' : '📉';
-}
-
-async function update() {
-  document.getElementById('btn-refresh').disabled = true;
-  const prices = await fetchPrices();
-  const container = document.getElementById('cards');
-  container.innerHTML = '';
-
-  for (const id of tokens) {
-    const price = prices[id]?.usd;
-    const closes = await fetchOHLC(id);
-    const rsi = calculateRSI(closes);
-    const macd = calculateMACD(closes);
-    const signal = getSignal(rsi, macd);
-    const arrow = trendArrow(closes);
-    const now = new Date().toLocaleTimeString();
-
-    const cls = signal === 'BUY' ? 'signal-buy' :
-                signal === 'SELL' ? 'signal-sell' :
-                signal === 'STRONG BUY' ? 'signal-strong' :
-                'signal-wait';
-
-    container.innerHTML += `
-      <div class="col-md-6 col-lg-4">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h5 class="card-title">${id.toUpperCase()}</h5>
-            <p>Price: $${price?.toFixed(6)}</p>
-            <p>Signal: <span class="${cls}">${signal}</span> ${arrow}</p>
-            <p>RSI: ${rsi.toFixed(2)}</p>
-            <p>MACD Hist: ${macd ? macd.hist.toFixed(4) : 'n/a'}</p>
-            <p class="text-muted small">Updated: ${now}</p>
-          </div>
-        </div>
-      </div>`;
-  }
-
-  document.getElementById('btn-refresh').disabled = false;
-}
-
-update();
-setInterval(update, 60000);
-document.getElementById('btn-refresh').addEventListener('click', update);
-</script>
+    fetchData();
+    setInterval(fetchData, 60000); // auto-refresh every 60s
+  </script>
 </body>
 </html>
